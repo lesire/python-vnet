@@ -2,15 +2,9 @@ from abc import ABCMeta, abstractmethod
 from threading import Thread
 from time import sleep
 
-""" Proxy meta class """
-class ProxyMetaClass(ABCMeta):
-    @property
-    def name(self):
-        return self._name
-
 """ Base proxy class """
 class BaseProxy(Thread):
-    __metaclass__ = ProxyMetaClass
+    __metaclass__ = ABCMeta
 
     def __init__(self, table):
         Thread.__init__(self)

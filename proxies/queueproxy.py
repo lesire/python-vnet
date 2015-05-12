@@ -1,4 +1,4 @@
-from baseproxy import BaseProxy
+from .baseproxy import BaseProxy
 from Queue import Queue, Empty
 
 """ Queue proxy class """

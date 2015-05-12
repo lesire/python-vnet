@@ -1,13 +1,12 @@
 import rospy
-
+from vnet import VNet
 from threading import RLock
 from filters.filter import create_filter
 import rostopic
 
-class VNetRos:
+class VNetRos(VNet):
     def __init__(self):
-        self.filters_table = {}
-        self.filters_lock = RLock()
+        VNet.__init__(self)
         
         self._config = rospy.get_param("vnet_config")
         rospy.loginfo("Got configuration %s" % str(self._config))
@@ -40,19 +39,6 @@ class VNetRos:
                 filters = []
             if all(map(lambda f: f(robot, r), filters)):
                 p.publish(data)
-
-    def add_filter(self, src, tgt, fname):
-        self.filters_lock.acquire()
-        try:
-            if not src in self.filters_table.keys():
-                self.filters_table[src] = {}
-            if not tgt in self.filters_table[src].keys():
-                self.filters_table[src][tgt] = []
-            self.filters_table[src][tgt] += [create_filter(fname)]
-        except Exception as e:
-            print(e)
-        finally:
-            self.filters_lock.release()
             
 if __name__ == "__main__":
     import sys
