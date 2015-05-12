@@ -1,14 +1,8 @@
 from abc import ABCMeta, abstractmethod
 
-""" Filter meta class """
-class FilterMetaClass(ABCMeta):
-    @property
-    def name(self):
-        return self._name
-
 """ Base filter class """
 class BaseFilter:
-    __metaclass__ = FilterMetaClass    
+    __metaclass__ = ABCMeta    
 
     def __call__(self, source, target):
         return self.filtered(source, target)

@@ -1,4 +1,6 @@
 from abc import ABCMeta, abstractmethod
+from threading import Thread
+from time import sleep
 
 """ Proxy meta class """
 class ProxyMetaClass(ABCMeta):
@@ -7,11 +9,13 @@ class ProxyMetaClass(ABCMeta):
         return self._name
 
 """ Base proxy class """
-class BaseProxy:
+class BaseProxy(Thread):
     __metaclass__ = ProxyMetaClass
 
     def __init__(self, table):
+        Thread.__init__(self)
         self._table = table
+        self.running = True
 
     @abstractmethod
     def read(self):
@@ -21,7 +25,7 @@ class BaseProxy:
     def send(self, destination, message):
         return True
 
-    @abstractmehod
+    @abstractmethod
     def acknowledge(self, destination, ack):
         pass
 
@@ -29,13 +33,21 @@ class BaseProxy:
     def destinations(self, message):
         return None, None
 
+    def stop(self):
+        self.running = False
+
     def run(self):
-        msg = self.read()
-        if msg:
-            src, tgt = self.destinations(msg)
-            filters = self._table[src][tgt]
-            if all(map(lambda f: f(src, tgt), filters)):
-                ack = self.send(tgt, msg)
-                self.acknowledge(src, ack)
-            else:
-                self.acknowledge(src, False)
+        while self.running:
+            msg = self.read()
+            if msg:
+                src, tgt = self.destinations(msg)
+                try:
+                    filters = self._table[src][tgt]
+                except:
+                    filters = []
+                if all(map(lambda f: f(src, tgt), filters)):
+                    ack = self.send(tgt, msg)
+                    self.acknowledge(src, ack)
+                else:
+                    self.acknowledge(src, False)
+            sleep(.1)
