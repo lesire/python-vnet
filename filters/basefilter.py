@@ -10,6 +10,9 @@ class BaseFilter:
     @abstractmethod
     def filtered(self, source, target):
         return None
+    
+    def __str__(self):
+        return self._name
 
 """ Pass filter: every message is forwarded """
 class PassFilter(BaseFilter):
