@@ -8,3 +8,5 @@ fb = f.create_filter("block")
 print(fb)
 print(fb("src", "tgt"))
 
+fp = f.create_filter("pose", range=10)
+print(fp)
