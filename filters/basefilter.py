@@ -14,16 +14,25 @@ class BaseFilter:
     def __str__(self):
         return self._name
 
+    def __eq__(self, other):
+        return self._name == other._name
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    
+    def update(self, **kwargs):
+        pass
+
 """ Pass filter: every message is forwarded """
 class PassFilter(BaseFilter):
     _name = "pass"
 
     def filtered(self, source, target):
-        return True
+        return False
 
 """ Block filter: every message is blocked """
 class BlockFilter(BaseFilter):
     _name = "block"
 
     def filtered(self, source, target):
-        return False
+        return True

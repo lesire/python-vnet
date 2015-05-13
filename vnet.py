@@ -7,6 +7,7 @@ class VNet:
     def __init__(self):
         self.filters_table = {}
         self.filters_lock = RLock()
+        self.filters = []
 
     def add_filter(self, src, tgt, filter, **kwargs):
         self.filters_lock.acquire()
@@ -15,7 +16,15 @@ class VNet:
                 self.filters_table[src] = {}
             if not tgt in self.filters_table[src].keys():
                 self.filters_table[src][tgt] = []
-            self.filters_table[src][tgt] += [create_filter(filter, **kwargs)]
+            f = create_filter(filter, **kwargs)
+            try:
+                i = self.filters.index(f)
+                del f
+                f = self.filters[i]
+                f.update(**kwargs)
+            except:
+                pass
+            self.filters_table[src][tgt] += [f]
             return True
         except:
             return False
@@ -46,4 +55,4 @@ class VNet:
             filters = self.filters_table[src][tgt]
         except:
             filters = []
-        return not all(map(lambda f: f(src, tgt), filters))
+        return any(map(lambda f: f(src, tgt), filters))

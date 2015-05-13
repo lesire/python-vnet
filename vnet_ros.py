@@ -2,9 +2,8 @@ import rospy
 import rostopic
 from std_msgs.msg import String
 
-from threading import RLock
-
 from vnet import VNet
+import json
 
 '''
 ROS-based implementation of VNet
@@ -64,6 +63,9 @@ class VNetRos(VNet):
         rospy.Subscriber("/vnet/list", String, self._admin, self.list_filters)
         rospy.Subscriber("/vnet/listall", String, self._admin, self.list_all_filters)
         
+        # Statistics
+        self._stat_publisher = rospy.Publisher("/vnet/statistics", String, queue_size=1)
+        
         self._publishers = {}
         
         for t, d in self._config.items():
@@ -92,14 +94,19 @@ class VNetRos(VNet):
             rospy.logerr(e)
 
     def _forward(self, data, robot_and_topic):
-        robot, topic = robot_and_topic        
+        robot, topic = robot_and_topic
         print("Received %s from %s on topic %s" % (str(data), robot, topic))
+        stats = {'message': {'robot': robot, 'topic': topic, 'data': data.data}, 'filtered': [], 'forwarded': []}
         for r, p in self._publishers[topic].items():
             rospy.logdebug(str(self.filters_table))
             rospy.logdebug("from %s to %s" % (robot, r))
-            if not is_filtered(robot, r):
+            if self.is_filtered(robot, r):
+                stats['filtered'].append(r)
+            else:
+                stats['forwarded'].append(r)
                 p.publish(data)
-            
+        self._stat_publisher.publish(json.dumps(stats))
+        
 if __name__ == "__main__":
     import sys
     rospy.init_node("vnet", log_level=rospy.DEBUG)
