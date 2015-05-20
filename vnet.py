@@ -11,6 +11,7 @@ class VNet:
 
     def add_filter(self, src, tgt, filter, **kwargs):
         self.filters_lock.acquire()
+        print("Adding filter %s/%s: %s" % (src, tgt, filter))
         try:
             if not src in self.filters_table.keys():
                 self.filters_table[src] = {}
@@ -31,12 +32,20 @@ class VNet:
         finally:
             self.filters_lock.release()
 
-    def del_filter(self, src, tgt, index):
+    def del_filter(self, src, tgt, index=-1, filter=None):
         self.filters_lock.acquire()
+        print("Deleting filter %s/%s: %s" % (src, tgt, (str(index) if filter is None else filter)))
         try:
-            del self.filters_table[src][tgt][index]
+            if filter is None:
+                del self.filters_table[src][tgt][index]
+            else:
+                for i in range(len(self.filters_table[src][tgt])):
+                    f = self.filters_table[src][tgt][i]
+                    if f._name == filter:
+                        return self.del_filter(src, tgt, i, None)
             return True
-        except:
+        except Exception as e:
+            print(e)
             return False
         finally:
             self.filters_lock.release()

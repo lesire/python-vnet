@@ -1,4 +1,6 @@
 import rospy
+import rosnode
+import json
 from vnet_ros import VNetRos
 from std_msgs.msg import String
 
@@ -17,9 +19,11 @@ for r, t in vnet_config["test"].items():
     publishers[r] = rospy.Publisher(t["out"], String, queue_size=1)
 
 rospy.set_param("vnet_config", vnet_config)
-rospy.sleep(1)
 
-vnet = VNetRos()
+#while not rospy.is_shutdown() and not "vnet" in rosnode.get_node_names():
+#    rospy.sleep(1)
+add_filter = rospy.Publisher("/vnet/add", String)
+del_filter = rospy.Publisher("/vnet/del", String)
 
 rospy.sleep(3)
 rospy.loginfo("Send a message from r1 - everyone should receive")
@@ -27,7 +31,17 @@ publishers["r1"].publish("hello")
 
 rospy.sleep(3)
 rospy.loginfo("Block messages from r1 to r2")
-vnet.add_filter("r1", "r2", "block")
+add_filter.publish(json.dumps({"src": "r1", "tgt": "r2", "filter": "block"}))
+rospy.sleep(3)
+rospy.loginfo("Send a message from r1 - only r3 should receive")
+publishers["r1"].publish("hello")
+rospy.sleep(3)
+rospy.loginfo("The other way?")
+publishers["r2"].publish("hello")
+
+rospy.sleep(3)
+rospy.loginfo("Pass messages from r2 to r1")
+del_filter.publish(json.dumps({"src": "r1", "tgt": "r2", "filter": "block"}))
 rospy.sleep(3)
 rospy.loginfo("Send a message from r1 - only r3 should receive")
 publishers["r1"].publish("hello")
