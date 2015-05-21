@@ -6,7 +6,7 @@ import igraph
 class GraphViewer:
     def __init__(self):
         # Input graph
-        self.sub = rospy.Subscriber("/vnet/graph/test", String, self._write_graph)
+        self.sub = rospy.Subscriber("/vnet/graph/repair", String, self._write_graph)
 
     def _write_graph(self, data):
         d = json.loads(data.data)
