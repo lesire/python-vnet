@@ -11,7 +11,7 @@ class VNet:
 
     def add_filter(self, src, tgt, filter, **kwargs):
         self.filters_lock.acquire()
-        print("Adding filter %s/%s: %s" % (src, tgt, filter))
+        print("Adding filter %s/%s: %s (%s)" % (src, tgt, filter, str(kwargs)))
         try:
             if not src in self.filters_table.keys():
                 self.filters_table[src] = {}
@@ -27,7 +27,8 @@ class VNet:
                 pass
             self.filters_table[src][tgt] += [f]
             return True
-        except:
+        except Exception as e:
+            print(e)
             return False
         finally:
             self.filters_lock.release()
@@ -58,10 +59,13 @@ class VNet:
         
     def list_all_filters(self):
         return self.filters_table
-            
-    def is_filtered(self, src, tgt):
+
+    def is_filtered_directed(self, src, tgt):
         try:
             filters = self.filters_table[src][tgt]
         except:
             filters = []
         return any(map(lambda f: f(src, tgt), filters))
+            
+    def is_filtered(self, src, tgt):
+        return self.is_filtered_directed(src, tgt) or self.is_filtered_directed(tgt, src)

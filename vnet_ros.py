@@ -61,7 +61,7 @@ class VNetRos(VNet):
     def __init__(self):
         VNet.__init__(self)
         
-        self._config = rospy.get_param("vnet_config")
+        self._config = rospy.get_param("vnet/config")
         rospy.loginfo("Got configuration %s" % str(self._config))
                 
         # Administration services
@@ -83,13 +83,15 @@ class VNetRos(VNet):
                 try:
                     k, _, _ = rostopic.get_topic_class(p['out'])
                     rospy.Subscriber(p['out'], k, self._forward, (r, t))
-                except:
+                except Exception as e:
                     rospy.loginfo("No input connection for robot %s on topic %s" % (r,t))
+                    rospy.loginfo(e)
                 try:
                     k, _, _ = rostopic.get_topic_class(p['in'])
                     self._publishers[t][r] = rospy.Publisher(p['in'], k, queue_size=1)
-                except:
+                except Exception as e:
                     rospy.loginfo("No output connection for robot %s on topic %s" % (r,t))
+                    rospy.loginfo(e)
             self._graph_publishers[t] = rospy.Publisher("/vnet/graph/"+t, String, queue_size=1)
             self._init_graph(t, list(d.keys()))
 
@@ -107,7 +109,7 @@ class VNetRos(VNet):
     def _forward(self, data, robot_and_topic):
         robot, topic = robot_and_topic
         rospy.logdebug("Received %s from %s on topic %s" % (str(data), robot, topic))
-        stats = {'message': {'robot': robot, 'topic': topic, 'data': data.data}, 'filtered': [], 'forwarded': []}
+        stats = {'from': robot, 'topic': topic, 'filtered': [], 'forwarded': [], 'data': str(data)[:20], 'size': len(str(data))}
         for r, p in self._publishers[topic].items():
             rospy.logdebug(str(self.filters_table))
             rospy.logdebug("from %s to %s" % (robot, r))
@@ -127,7 +129,7 @@ class VNetRos(VNet):
                     self.graphs[topic][a][b] = {"connected": True}               
         rospy.logdebug(self.graphs[topic])
 
-    def _add_link(self, topic, src, tgt):
+    def _add_link(self, topic, src, tgt):       
         self.graphs[topic][src][tgt]["connected"] = True
         self.graphs[topic][tgt][src]["connected"] = True
     
