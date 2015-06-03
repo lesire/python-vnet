@@ -1,0 +1,12 @@
+<launch>
+
+    <node name="vnet" pkg="vnet" type="vnet_ros.py" output="screen">
+    	<rosparam param="config">
+repair/ressac1: {in: /ressac1/hidden/repair/in, out: /ressac1/hidden/repair/out}
+repair/ressac2: {in: /ressac2/hidden/repair/in, out: /ressac2/hidden/repair/out}
+repair/mana: {in: /mana/hidden/repair/in, out: /mana/hidden/repair/out}
+repair/minnie: {in: /minnie/hidden/repair/in, out: /minnie/hidden/repair/out}
+        </rosparam>
+    </node>
+        
+</launch>

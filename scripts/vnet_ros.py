@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import rospy
 import rostopic
 from std_msgs.msg import String
@@ -61,8 +62,12 @@ class VNetRos(VNet):
     def __init__(self):
         VNet.__init__(self)
         
-        self._config = rospy.get_param("vnet/config")
-        rospy.loginfo("Got configuration %s" % str(self._config))
+        try:
+            self._config = rospy.get_param("vnet/config")
+            rospy.loginfo("Got configuration %s" % str(self._config))
+        except:
+            rospy.logwarn("No vNet configuration: vNet might do nothing!")
+            self._config = {}
                 
         # Administration services
         rospy.Subscriber("/vnet/add", String, self._admin, self.add_filter)
