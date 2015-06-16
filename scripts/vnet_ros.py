@@ -5,6 +5,7 @@ from std_msgs.msg import String
 
 from vnet import VNet
 import json
+import time
 
 def all_pairs(l):
     L = list(l)
@@ -81,6 +82,9 @@ class VNetRos(VNet):
         self._publishers = {}
         self._graph_publishers = {}
         self.graphs = {}
+
+        # Wait for all the topics to be published to have the topic class defined
+        time.sleep(5)
 
         for t, d in self._config.items():
             self._publishers[t] = {}
