@@ -104,6 +104,8 @@ class VNetRos(VNet):
             self._graph_publishers[t] = rospy.Publisher("/vnet/graph/"+t, String, queue_size=1)
             self._init_graph(t, list(d.keys()))
 
+            self.robots = self.robots.union(set(d.keys()))
+
     def _admin(self, args, request):
         try:
             if len(args.data) < 1:
