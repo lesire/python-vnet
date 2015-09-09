@@ -13,6 +13,8 @@ class PoseFilter(BaseFilter):
         BaseFilter.__init__(self)
         self._range = range
         self._positions = {}
+
+        rospy.loginfo("Creating a pose filter with %s" % kwargs)
         self.update(**kwargs)
     
     def _findposition(self, data):
@@ -23,15 +25,25 @@ class PoseFilter(BaseFilter):
                     
     def _update_pose(self, data, robot):
         self._positions[robot] = self._findposition(data)
-        
+
+    # Assume that in kwargs there is the position topic as "robotName":"/robot/pose"
     def update(self, **kwargs):
+
+        #Assume default position topic if not given
+        if "src" in kwargs and kwargs["src"] not in kwargs:
+            kwargs[kwargs["src"]] = "/%s/pose" % kwargs["src"]
+
+        if "tgt" in kwargs and kwargs["tgt"] not in kwargs:
+            kwargs[kwargs["tgt"]] = "/%s/pose" % kwargs["tgt"]
+
         for k, v in kwargs.items():
+            if k in ["src","tgt"]: continue
             try:
                 msgType, _, _ = rostopic.get_topic_class(v)
             except rostopic.ROSTopicException as e:
                 rospy.logwarn(e)
                 continue
-            print("%s type is %s (robot %s)" % (v, str(msgType), k))
+            rospy.loginfo("%s type is %s (robot %s)" % (v, str(msgType), k))
             rospy.Subscriber(v, msgType, self._update_pose, k)
         
     def __eq__(self, other):

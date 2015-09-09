@@ -3,6 +3,8 @@ from threading import RLock
 from filters.filter import create_filter
 from proxies.proxy import create_proxy
 
+import traceback
+
 class VNet:
     def __init__(self):
         self.filters_table = {}
@@ -39,7 +41,7 @@ class VNet:
                 self.filters_table[src] = {}
             if not tgt in self.filters_table[src].keys():
                 self.filters_table[src][tgt] = []
-            f = create_filter(filter, **kwargs)
+            f = create_filter(filter, src=src, tgt=tgt, **kwargs)
             try:
                 i = self.filters.index(f)
                 del f
@@ -50,13 +52,14 @@ class VNet:
             self.filters_table[src][tgt] += [f]
             return True
         except Exception as e:
-            print(e)
+            print(traceback.format_exc())
             return False
         finally:
             self.filters_lock.release()
 
     def del_filter(self, src, tgt, index=-1, filter=None, **kwargs):
         self.filters_lock.acquire()
+        print("Del %s %s %s %s %s" % (src, tgt, index, filter, kwargs))
         try:
             if src == "*":
                 for r in self.robots:
@@ -77,7 +80,7 @@ class VNet:
                 return True
 
             elif index == "*":
-                for i in range(len(self.filters_table[src][tgt])):
+                for i in reversed(range(len(self.filters_table[src][tgt]))):
                     self.del_filter(src, tgt, index=i, filter=None, **kwargs)
                 return True
 
@@ -92,7 +95,7 @@ class VNet:
                         return self.del_filter(src, tgt, i, None)
             return True
         except Exception as e:
-            print(e)
+            print(traceback.format_exc())
             return False
         finally:
             self.filters_lock.release()

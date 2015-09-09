@@ -4,6 +4,9 @@ from abc import ABCMeta, abstractmethod
 class BaseFilter:
     __metaclass__ = ABCMeta    
 
+    def __init__(self, **kwargs):
+        pass
+
     def __call__(self, source, target):
         return self.filtered(source, target)
 
