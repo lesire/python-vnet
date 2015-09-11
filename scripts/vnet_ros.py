@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import rospy
 import rostopic
-from std_msgs.msg import String
+from std_msgs.msg import String,Empty
 
 from vnet import VNet
 import json
@@ -62,6 +62,29 @@ The admin topics are all waiting a String object formatted as a json dict.
 class VNetRos(VNet):
     def __init__(self):
         VNet.__init__(self)
+                
+        # Administration services
+        rospy.Subscriber("/vnet/add", String, self._admin, self.add_filter)
+        rospy.Subscriber("/vnet/del", String, self._admin, self.del_filter)
+        rospy.Subscriber("/vnet/list", String, self._admin, self.list_filters)
+        rospy.Subscriber("/vnet/listall", String, self._admin, self.list_all_filters)
+        rospy.Subscriber("/vnet/reload", Empty, self._reload_config)
+        
+        # Statistics
+        self._stat_publisher = rospy.Publisher("/vnet/statistics", String, queue_size=1)
+        
+        self._publishers = {}
+        self._subscribers = {}
+        self._graph_publishers = {}
+        self.graphs = {}
+
+        # Wait for all the topics to be published to have the topic class defined
+        time.sleep(5)
+        
+        self._reload_config()
+
+    def _reload_config(self, data=None):
+        rospy.loginfo("Reloading vNet config")
         
         try:
             self._config = rospy.get_param("vnet/config")
@@ -69,42 +92,70 @@ class VNetRos(VNet):
         except:
             rospy.logwarn("No vNet configuration: vNet might do nothing!")
             self._config = {}
+        
+        # Remove obsolete topics publishers
+        for channel in self._publishers.keys():
+            if channel not in self._config:
+                for robot,publisher in self._publishers[channel].items():
+                    publisher.unregister()
+                del self._publishers[channel]
+                    
+            for robot,publisher in self._publishers[channel].items():
+                if robot not in self._config[channel]:
+                    publisher.unregister()
+                    
+        # Remove obsolete channels subscribers
+        for channel in self._subscribers.keys():
+            if channel not in self._config:
+                for robot,subscriber in self._subscribers[channel].items():
+                    subscriber.unregister()
+                del self._subscribers[channel]
+                    
+            for robot,subscriber in self._subscribers[channel].items():
+                if robot not in self._config[channel]:
+                    subscriber.unregister()
+        
+        self.robot = set()
+        
+        for channel,channel_info in self._config.items():
+            # For each channel, get the message type
+            msg_type = None
+            well_defined = True
+            for port in [d["in"] for d in channel_info.values()]:
+                try:
+                    t,_,_ = rostopic.get_topic_class(port)
+                except:
+                    continue #topic not yet defined
+                if msg_type is not None and t is not None and t != msg_type:
+                    rospy.logerr("Bad vNet config : the channel %s has conflicting message type : %s and %s" %(channel,msg_type,t))
+                    well_defined = False
+                elif msg_type is None and t is not None:
+                    msg_type = t
+            
+            if msg_type is None:
+                rospy.logerr("Cannot find a single defined topic for channel %s. Ignoring it" % channel)
+                well_defined = False
+            
+            rospy.loginfo("Got type %s for %s channel" % (msg_type,channel))
+            
+            # Create new subscriber/publisher as needed
+            if well_defined:
+                if channel not in self._publishers:  self._publishers[channel] = {}
+                if channel not in self._subscribers: self._subscribers[channel] = {}
                 
-        # Administration services
-        rospy.Subscriber("/vnet/add", String, self._admin, self.add_filter)
-        rospy.Subscriber("/vnet/del", String, self._admin, self.del_filter)
-        rospy.Subscriber("/vnet/list", String, self._admin, self.list_filters)
-        rospy.Subscriber("/vnet/listall", String, self._admin, self.list_all_filters)
-        
-        # Statistics
-        self._stat_publisher = rospy.Publisher("/vnet/statistics", String, queue_size=1)
-        
-        self._publishers = {}
-        self._graph_publishers = {}
-        self.graphs = {}
+                for robot,ports in channel_info.items():
+                    if robot not in self._subscribers[channel]:
+                        self._subscribers[channel][robot] = rospy.Subscriber(ports['out'], msg_type, self._forward, (robot, channel))
+                    if robot not in self._publishers[channel]:
+                        self._publishers[channel][robot] = rospy.Publisher(ports['in'], msg_type, queue_size=1)
 
-        # Wait for all the topics to be published to have the topic class defined
-        time.sleep(5)
+                self._graph_publishers[channel] = rospy.Publisher("/vnet/graph/"+channel, String, queue_size=1)
+                self._init_graph(channel, list(channel_info.keys()))
 
-        for t, d in self._config.items():
-            self._publishers[t] = {}
-            for r, p in d.items():
-                try:
-                    k, _, _ = rostopic.get_topic_class(p['out'])
-                    rospy.Subscriber(p['out'], k, self._forward, (r, t))
-                except Exception as e:
-                    rospy.loginfo("No input connection for robot %s on topic %s" % (r,t))
-                    rospy.loginfo(e)
-                try:
-                    k, _, _ = rostopic.get_topic_class(p['in'])
-                    self._publishers[t][r] = rospy.Publisher(p['in'], k, queue_size=1)
-                except Exception as e:
-                    rospy.loginfo("No output connection for robot %s on topic %s" % (r,t))
-                    rospy.loginfo(e)
-            self._graph_publishers[t] = rospy.Publisher("/vnet/graph/"+t, String, queue_size=1)
-            self._init_graph(t, list(d.keys()))
-
-            self.robots = self.robots.union(set(d.keys()))
+                self.robot = self.robot.union(set(channel_info.keys()))
+                
+            else:
+                del self._config[channel]
 
     def _admin(self, args, request):
         try:
