@@ -6,6 +6,7 @@ from std_msgs.msg import String,Empty
 from vnet import VNet
 import json
 import time
+from threading import RLock
 
 def all_pairs(l):
     L = list(l)
@@ -115,6 +116,10 @@ class VNetRos(VNet):
                 if robot not in self._config[channel]:
                     subscriber.unregister()
         
+        self.channelLocks = {}
+        for c in self._config:
+            self.channelLocks[c] = RLock()
+        
         self.robot = set()
         
         for channel,channel_info in self._config.items():
@@ -170,17 +175,19 @@ class VNetRos(VNet):
 
     def _forward(self, data, robot_and_topic):
         robot, topic = robot_and_topic
-        rospy.logdebug("Received %s from %s on topic %s" % (str(data), robot, topic))
-        stats = {'from': robot, 'topic': topic, 'filtered': [], 'forwarded': [], 'data': str(data)[:20], 'size': len(str(data))}
-        for r, p in self._publishers[topic].items():
+        with self.channelLocks[topic]:
+            rospy.logdebug("Received %s from %s on topic %s" % (str(data), robot, topic))
             rospy.logdebug(str(self.filters_table))
-            rospy.logdebug("from %s to %s" % (robot, r))
-            if self.is_filtered(robot, r):
-                stats['filtered'].append(r)
-            else:
-                stats['forwarded'].append(r)
-                p.publish(data)
-        self._stat_publisher.publish(json.dumps(stats))
+            stats = {'from': robot, 'topic': topic, 'filtered': [], 'forwarded': [], 'data': str(data)[:20], 'size': len(str(data))}
+            for r, p in self._publishers[topic].items():
+                if self.is_filtered(robot, r):
+                    rospy.logdebug("Filter it from %s to %s" % (robot, r))
+                    stats['filtered'].append(r)
+                else:
+                    rospy.logdebug("Forward it from %s to %s on %s" % (robot, r, p.name))
+                    stats['forwarded'].append(r)
+                    p.publish(data)
+            self._stat_publisher.publish(json.dumps(stats))
     
     def _init_graph(self, topic, robots):
         self.graphs[topic] = {}
