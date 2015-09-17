@@ -13,6 +13,9 @@ class VNet:
 
         self.robots = set() # list of all know robots
 
+    def log(self, *args):
+        print " ".join([str(s) for s in args])
+
     def add_filter(self, src, tgt, filter, **kwargs):
         self.filters_lock.acquire()
 
@@ -35,7 +38,7 @@ class VNet:
                 self.add_filter(tgt, src, filter, **kwargs)
                 return True
 
-            print("Adding filter %s/%s: %s (%s)" % (src, tgt, filter, str(kwargs)))
+            self.log("Adding filter %s/%s: %s (%s)" % (src, tgt, filter, str(kwargs)))
 
             if not src in self.filters_table.keys():
                 self.filters_table[src] = {}
@@ -59,7 +62,7 @@ class VNet:
 
     def del_filter(self, src, tgt, index=-1, filter=None, **kwargs):
         self.filters_lock.acquire()
-        print("Del %s %s %s %s %s" % (src, tgt, index, filter, kwargs))
+        self.log("Del %s %s %s %s %s" % (src, tgt, index, filter, kwargs))
         try:
             if src == "*":
                 for r in self.robots:
@@ -84,7 +87,7 @@ class VNet:
                     self.del_filter(src, tgt, index=i, filter=None, **kwargs)
                 return True
 
-            print("Deleting filter %s/%s: %s" % (src, tgt, (str(index) if filter is None else filter)))
+            self.log("Deleting filter %s/%s: %s" % (src, tgt, (str(index) if filter is None else filter)))
 
             if filter is None:
                 del self.filters_table[src][tgt][index]

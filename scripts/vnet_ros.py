@@ -84,6 +84,9 @@ class VNetRos(VNet):
         
         self._reload_config()
 
+    def log(self, *args):
+        rospy.loginfo(" ".join([str(s) for s in args]))
+
     def _reload_config(self, data=None):
         rospy.loginfo("Reloading vNet config")
         
@@ -120,7 +123,7 @@ class VNetRos(VNet):
         for c in self._config:
             self.channelLocks[c] = RLock()
         
-        self.robot = set()
+        self.robots = set()
         
         for channel,channel_info in self._config.items():
             # For each channel, get the message type
@@ -157,7 +160,7 @@ class VNetRos(VNet):
                 self._graph_publishers[channel] = rospy.Publisher("/vnet/graph/"+channel, String, queue_size=1)
                 self._init_graph(channel, list(channel_info.keys()))
 
-                self.robot = self.robot.union(set(channel_info.keys()))
+                self.robots = self.robots.union(set(channel_info.keys()))
                 
             else:
                 del self._config[channel]
