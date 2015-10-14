@@ -72,7 +72,7 @@ class VNetRos(VNet):
         rospy.Subscriber("/vnet/reload", Empty, self._reload_config)
         
         # Statistics
-        self._stat_publisher = rospy.Publisher("/vnet/statistics", String, queue_size=1)
+        self._stat_publisher = rospy.Publisher("/vnet/statistics", String, queue_size=100)
         
         self._publishers = {}
         self._subscribers = {}
@@ -155,9 +155,9 @@ class VNetRos(VNet):
                     if robot not in self._subscribers[channel]:
                         self._subscribers[channel][robot] = rospy.Subscriber(ports['out'], msg_type, self._forward, (robot, channel))
                     if robot not in self._publishers[channel]:
-                        self._publishers[channel][robot] = rospy.Publisher(ports['in'], msg_type, queue_size=1)
+                        self._publishers[channel][robot] = rospy.Publisher(ports['in'], msg_type, queue_size=100)
 
-                self._graph_publishers[channel] = rospy.Publisher("/vnet/graph/"+channel, String, queue_size=1)
+                self._graph_publishers[channel] = rospy.Publisher("/vnet/graph/"+channel, String, queue_size=100)
                 self._init_graph(channel, list(channel_info.keys()))
 
                 self.robots = self.robots.union(set(channel_info.keys()))
